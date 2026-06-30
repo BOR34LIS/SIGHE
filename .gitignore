@@ -1,2 +1,4 @@
 # Claude Code local settings (machine/user-specific permissions)
 .claude/settings.local.json
+.vercel
+.env*
