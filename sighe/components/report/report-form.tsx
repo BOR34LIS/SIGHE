@@ -18,13 +18,13 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { createPublicReport, type ReportFormState } from "@/app/q/[code]/actions";
+import { createPublicReport, type ReportFormState } from "@/app/q/[id]/actions";
 
 const initialState: ReportFormState = { error: null, success: false };
 
-export function ReportForm({ qrCode }: { qrCode: string }) {
+export function ReportForm({ equipmentId }: { equipmentId: string }) {
   const action = (prevState: ReportFormState, formData: FormData) =>
-    createPublicReport(qrCode, prevState, formData);
+    createPublicReport(equipmentId, prevState, formData);
 
   const [state, formAction, isPending] = useActionState(action, initialState);
 

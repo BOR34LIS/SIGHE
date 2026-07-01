@@ -1,10 +1,9 @@
 import type { TicketStatus } from "@/lib/supabase/database.types";
 
 export const ticketStatusLabels: Record<TicketStatus, string> = {
-  abierto: "Abierto",
-  en_diagnostico: "En diagnóstico",
-  en_reparacion: "En reparación",
-  cerrado: "Cerrado",
+  pendiente: "Pendiente",
+  en_revision: "En revisión",
+  resuelto: "Resuelto",
   cancelado: "Cancelado",
 };
 
@@ -12,10 +11,9 @@ export const ticketStatusVariant: Record<
   TicketStatus,
   "default" | "secondary" | "destructive" | "outline"
 > = {
-  abierto: "default",
-  en_diagnostico: "secondary",
-  en_reparacion: "secondary",
-  cerrado: "outline",
+  pendiente: "default",
+  en_revision: "secondary",
+  resuelto: "outline",
   cancelado: "destructive",
 };
 

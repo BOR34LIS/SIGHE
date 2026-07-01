@@ -11,17 +11,18 @@ import { ReportForm } from "@/components/report/report-form";
 export default async function PublicQrPage({
   params,
 }: {
-  params: Promise<{ code: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { code } = await params;
+  const { id } = await params;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data, error } = await supabase.rpc("public_get_equipment_by_qr", {
-    p_qr_code: code,
-  });
-
-  const equipment = data?.[0];
+  const { data: equipment, error } = await supabase
+    .from("equipment")
+    .select("id, brand, model, code, equipment_types(name), companies(name)")
+    .eq("id", id)
+    .neq("status", "dado_de_baja")
+    .single();
 
   if (error || !equipment) {
     return (
@@ -47,12 +48,12 @@ export default async function PublicQrPage({
               {equipment.brand} {equipment.model}
             </CardTitle>
             <CardDescription>
-              {equipment.company_name} · {equipment.equipment_type} · Código{" "}
-              {equipment.code}
+              {equipment.companies?.name} · {equipment.equipment_types?.name} ·
+              Código {equipment.code}
             </CardDescription>
           </CardHeader>
         </Card>
-        <ReportForm qrCode={code} />
+        <ReportForm equipmentId={equipment.id} />
       </div>
     </main>
   );

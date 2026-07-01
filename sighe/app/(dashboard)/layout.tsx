@@ -30,11 +30,9 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const { data: company } = await supabase
-    .from("companies")
-    .select("name")
-    .eq("id", profile.company_id)
-    .single();
+  const { data: company } = profile.company_id
+    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
+    : { data: null };
 
   return (
     <div className="flex flex-1">

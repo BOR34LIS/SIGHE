@@ -7,7 +7,7 @@ import { reportSchema } from "@/lib/validations/report";
 export type ReportFormState = { error: string | null; success: boolean };
 
 export async function createPublicReport(
-  qrCode: string,
+  equipmentId: string,
   _prevState: ReportFormState,
   formData: FormData,
 ): Promise<ReportFormState> {
@@ -28,11 +28,11 @@ export async function createPublicReport(
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { error } = await supabase.rpc("public_create_repair_ticket", {
-    p_qr_code: qrCode,
-    p_title: parsed.data.title,
-    p_description: parsed.data.description || null,
-    p_fault_type: parsed.data.fault_type ?? null,
+  const { error } = await supabase.from("repair_tickets").insert({
+    equipment_id: equipmentId,
+    title: parsed.data.title,
+    description: parsed.data.description || null,
+    fault_type: parsed.data.fault_type ?? null,
   });
 
   if (error) {

@@ -1,4 +1,4 @@
-// Tipos escritos a mano a partir de supabase_schema.sql (no generados por
+// Tipos escritos a mano a partir de sighe_fresh_schema.sql (no generados por
 // `supabase gen types`, ya que el proyecto no tiene la CLI de Supabase
 // vinculada). Si en algún momento se linkea el proyecto, reemplazar este
 // archivo por la salida real de `supabase gen types typescript`.
@@ -10,23 +10,11 @@ export type EquipmentStatus =
   | "mejorado"
   | "irrecuperable";
 
-export type PurchaseStatus =
-  | "solicitada"
-  | "aprobada"
-  | "en_proceso"
-  | "recibida"
-  | "rechazada";
-
 export type UserRole = "super_admin" | "admin" | "tecnico" | "usuario";
 
 export type FaultType = "hardware" | "software";
 
-export type TicketStatus =
-  | "abierto"
-  | "en_diagnostico"
-  | "en_reparacion"
-  | "cerrado"
-  | "cancelado";
+export type TicketStatus = "pendiente" | "en_revision" | "resuelto" | "cancelado";
 
 export type Database = {
   public: {
@@ -62,7 +50,7 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          company_id: string;
+          company_id: string | null;
           full_name: string;
           email: string;
           role: UserRole;
@@ -73,7 +61,7 @@ export type Database = {
         };
         Insert: {
           id: string;
-          company_id: string;
+          company_id?: string | null;
           full_name: string;
           email: string;
           role?: UserRole;
@@ -99,35 +87,10 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["equipment_types"]["Insert"]>;
         Relationships: [];
       };
-      floor_plans: {
-        Row: {
-          id: string;
-          company_id: string;
-          name: string;
-          image_url: string;
-          floor_number: number | null;
-          building: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          company_id: string;
-          name: string;
-          image_url: string;
-          floor_number?: number | null;
-          building?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["floor_plans"]["Insert"]>;
-        Relationships: [];
-      };
       locations: {
         Row: {
           id: string;
           company_id: string;
-          floor_plan_id: string | null;
           name: string;
           floor: number | null;
           room: string | null;
@@ -140,7 +103,6 @@ export type Database = {
         Insert: {
           id?: string;
           company_id: string;
-          floor_plan_id?: string | null;
           name: string;
           floor?: number | null;
           room?: string | null;
@@ -161,7 +123,6 @@ export type Database = {
           location_id: string | null;
           assigned_user_id: string | null;
           code: string;
-          qr_code: string | null;
           brand: string;
           model: string;
           serial_number: string | null;
@@ -179,7 +140,6 @@ export type Database = {
           location_id?: string | null;
           assigned_user_id?: string | null;
           code: string;
-          qr_code?: string | null;
           brand: string;
           model: string;
           serial_number?: string | null;
@@ -191,7 +151,36 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["equipment"]["Insert"]>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "equipment_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "equipment_equipment_type_id_fkey";
+            columns: ["equipment_type_id"];
+            isOneToOne: false;
+            referencedRelation: "equipment_types";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "equipment_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "equipment_assigned_user_id_fkey";
+            columns: ["assigned_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       parts: {
         Row: {
@@ -242,9 +231,10 @@ export type Database = {
       repair_tickets: {
         Row: {
           id: string;
-          company_id: string;
+          company_id: string | null;
           equipment_id: string;
           reported_by: string | null;
+          reporter_name: string | null;
           assigned_to: string | null;
           title: string;
           description: string | null;
@@ -259,9 +249,10 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          company_id: string;
+          company_id?: string | null;
           equipment_id: string;
           reported_by?: string | null;
+          reporter_name?: string | null;
           assigned_to?: string | null;
           title: string;
           description?: string | null;
@@ -297,60 +288,16 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["repair_ticket_parts"]["Insert"]>;
         Relationships: [];
       };
-      purchase_orders: {
-        Row: {
-          id: string;
-          company_id: string;
-          requested_by: string | null;
-          approved_by: string | null;
-          status: PurchaseStatus;
-          supplier: string | null;
-          notes: string | null;
-          requested_at: string;
-          approved_at: string | null;
-          received_at: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          company_id: string;
-          requested_by?: string | null;
-          approved_by?: string | null;
-          status?: PurchaseStatus;
-          supplier?: string | null;
-          notes?: string | null;
-          requested_at?: string;
-          approved_at?: string | null;
-          received_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["purchase_orders"]["Insert"]>;
-        Relationships: [];
-      };
-      purchase_order_items: {
-        Row: {
-          id: string;
-          purchase_order_id: string;
-          part_id: string;
-          quantity: number;
-          unit_price: number | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          purchase_order_id: string;
-          part_id: string;
-          quantity: number;
-          unit_price?: number | null;
-          created_at?: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["purchase_order_items"]["Insert"]>;
-        Relationships: [];
-      };
     };
     Views: {
+      v_tickets_summary: {
+        Row: {
+          company: string;
+          status: TicketStatus;
+          total: number;
+        };
+        Relationships: [];
+      };
       v_low_stock: {
         Row: {
           inventory_id: string;
@@ -376,49 +323,23 @@ export type Database = {
         };
         Relationships: [];
       };
-      v_tickets_summary: {
-        Row: {
-          company: string;
-          status: TicketStatus;
-          total: number;
-        };
-        Relationships: [];
-      };
     };
     Functions: {
-      get_my_company_id: {
+      current_company_id: {
         Args: Record<PropertyKey, never>;
         Returns: string;
       };
-      get_my_role: {
+      is_super_admin: {
         Args: Record<PropertyKey, never>;
-        Returns: UserRole;
+        Returns: boolean;
       };
-      public_get_equipment_by_qr: {
-        Args: { p_qr_code: string };
-        Returns: {
-          equipment_id: string;
-          company_name: string;
-          equipment_type: string;
-          brand: string;
-          model: string;
-          code: string;
-          status: EquipmentStatus;
-        }[];
-      };
-      public_create_repair_ticket: {
-        Args: {
-          p_qr_code: string;
-          p_title: string;
-          p_description: string | null;
-          p_fault_type?: FaultType | null;
-        };
-        Returns: string;
+      is_admin_of_own_company: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
       };
     };
     Enums: {
       equipment_status: EquipmentStatus;
-      purchase_status: PurchaseStatus;
       user_role: UserRole;
       fault_type: FaultType;
       ticket_status: TicketStatus;

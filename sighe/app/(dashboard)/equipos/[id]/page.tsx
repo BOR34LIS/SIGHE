@@ -47,7 +47,7 @@ export default async function EquipoDetailPage({
   const headersList = await headers();
   const host = headersList.get("host") ?? "localhost:3000";
   const protocol = host.startsWith("localhost") ? "http" : "https";
-  const reportUrl = `${protocol}://${host}/q/${equipment.qr_code}`;
+  const reportUrl = `${protocol}://${host}/q/${equipment.id}`;
 
   return (
     <div className="flex flex-col gap-4">
@@ -91,7 +91,7 @@ export default async function EquipoDetailPage({
             <CardTitle>Código QR</CardTitle>
           </CardHeader>
           <CardContent>
-            <EquipmentQrCode url={reportUrl} code={equipment.qr_code ?? equipment.code} />
+            <EquipmentQrCode url={reportUrl} code={equipment.code} />
           </CardContent>
         </Card>
 

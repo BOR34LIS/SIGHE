@@ -22,7 +22,7 @@ async function requireProfile() {
     .select("company_id")
     .eq("id", user.id)
     .single();
-  if (!profile) redirect("/login");
+  if (!profile || !profile.company_id) redirect("/login");
 
   return { supabase, companyId: profile.company_id, userId: user.id };
 }
