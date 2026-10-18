@@ -24,6 +24,20 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <div className="rounded-lg border border-border bg-surface-muted px-3 py-2.5 text-sm text-text-muted">
+        Este registro crea una <strong className="font-medium text-text">cuenta de administrador</strong>{" "}
+        para una empresa nueva. Si tu empresa ya usa SIGHE, pide a tu administrador que te cree una
+        cuenta en vez de registrarte aquí.
+      </div>
+      <FormField
+        id="companyName"
+        name="companyName"
+        type="text"
+        label="Nombre de la empresa"
+        placeholder="Mi Empresa SpA"
+        autoComplete="organization"
+        required
+      />
       <FormField
         id="fullName"
         name="fullName"

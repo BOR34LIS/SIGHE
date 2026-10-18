@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type AuthFormState = {
   error?: string;
@@ -40,11 +41,12 @@ export async function signup(
   formData: FormData
 ): Promise<AuthFormState> {
   const fullName = String(formData.get("fullName") ?? "").trim();
+  const companyName = String(formData.get("companyName") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-  if (!fullName || !email || !password) {
+  if (!fullName || !companyName || !email || !password) {
     return { error: "Completa todos los campos." };
   }
 
@@ -70,6 +72,27 @@ export async function signup(
       return { error: "Ese correo ya está registrado." };
     }
     return { error: "No se pudo crear la cuenta. Intenta nuevamente." };
+  }
+
+  if (!data.user) {
+    return { error: "No se pudo crear la cuenta. Intenta nuevamente." };
+  }
+
+  const { error: companyError } = await supabase.rpc("register_company_admin", {
+    p_user_id: data.user.id,
+    p_company_name: companyName,
+  });
+
+  if (companyError) {
+    // El usuario de auth ya se creó: lo removemos para que pueda reintentar limpio
+    // (ej. con otro nombre de empresa) sin quedar con una cuenta huérfana.
+    const adminClient = createAdminClient();
+    await adminClient.auth.admin.deleteUser(data.user.id);
+
+    if (companyError.message.includes("Ya existe una empresa")) {
+      return { error: "Ya existe una empresa registrada con ese nombre." };
+    }
+    return { error: "No se pudo crear la empresa. Intenta nuevamente." };
   }
 
   if (!data.session) {

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./(auth)/actions";
 
@@ -61,6 +62,14 @@ export default async function HomePage() {
           <p className="max-w-xs text-sm text-text-subtle">
             Aún no perteneces a ninguna empresa. Un administrador debe asignarte una.
           </p>
+        )}
+        {profile?.role === "admin" && (
+          <Link
+            href="/admin/usuarios"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
+          >
+            Panel de administración
+          </Link>
         )}
       </main>
     </div>

@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
+const PASSWORD_CHANGE_PATH = "/cambiar-password";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -42,6 +43,22 @@ export async function updateSession(request: NextRequest) {
 
   if (user && (pathname === "/login" || pathname === "/signup")) {
     return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  if (user && !isPublicPath) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("must_change_password")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.must_change_password && pathname !== PASSWORD_CHANGE_PATH) {
+      return NextResponse.redirect(new URL(PASSWORD_CHANGE_PATH, request.url));
+    }
+
+    if (!profile?.must_change_password && pathname === PASSWORD_CHANGE_PATH) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   return response;
