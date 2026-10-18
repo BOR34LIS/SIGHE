@@ -57,7 +57,7 @@ export function AddEquipmentButton({
       return;
     }
 
-    onAdded(data);
+    onAdded({ ...data, has_open_report: false });
     reset();
     setIsOpen(false);
   }

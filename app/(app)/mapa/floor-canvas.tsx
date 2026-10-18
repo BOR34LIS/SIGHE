@@ -41,16 +41,34 @@ export function FloorCanvas({
     let cancelled = false;
 
     const supabase = createClient();
-    supabase
-      .from("equipment")
-      .select("id, floor_id, type, label, x_position, y_position, is_disabled")
-      .eq("floor_id", floor.id)
-      .then(({ data }) => {
-        if (!cancelled) {
-          setEquipment(data ?? []);
-          setIsLoading(false);
-        }
-      });
+    (async () => {
+      const { data: equipmentData } = await supabase
+        .from("equipment")
+        .select("id, floor_id, type, label, x_position, y_position, is_disabled")
+        .eq("floor_id", floor.id);
+
+      const ids = (equipmentData ?? []).map((item) => item.id);
+      let openReportIds = new Set<string>();
+
+      if (ids.length > 0) {
+        const { data: tickets } = await supabase
+          .from("repair_tickets")
+          .select("equipment_id")
+          .in("equipment_id", ids)
+          .in("status", ["pendiente", "en_revision"]);
+        openReportIds = new Set((tickets ?? []).map((t) => t.equipment_id));
+      }
+
+      if (!cancelled) {
+        setEquipment(
+          (equipmentData ?? []).map((item) => ({
+            ...item,
+            has_open_report: openReportIds.has(item.id),
+          }))
+        );
+        setIsLoading(false);
+      }
+    })();
 
     return () => {
       cancelled = true;

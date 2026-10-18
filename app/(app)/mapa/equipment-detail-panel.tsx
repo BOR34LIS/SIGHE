@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Equipment } from "./types";
+import { EquipmentQrModal } from "./equipment-qr-modal";
 
 export function EquipmentDetailPanel({
   equipment,
@@ -18,6 +19,7 @@ export function EquipmentDetailPanel({
   onDeleted: (id: string) => void;
 }) {
   const [isSaving, setIsSaving] = useState(false);
+  const [showQr, setShowQr] = useState(false);
 
   async function handleToggleDisabled() {
     setIsSaving(true);
@@ -31,7 +33,7 @@ export function EquipmentDetailPanel({
     setIsSaving(false);
 
     if (!error && data) {
-      onUpdated(data);
+      onUpdated({ ...data, has_open_report: equipment.has_open_report });
     }
   }
 
@@ -48,18 +50,33 @@ export function EquipmentDetailPanel({
     }
   }
 
+  const statusLabel = equipment.is_disabled
+    ? "Inhabilitado"
+    : equipment.has_open_report
+      ? "Con reporte pendiente"
+      : "Operativo";
+  const statusColor = equipment.is_disabled
+    ? "text-danger"
+    : equipment.has_open_report
+      ? "text-warning"
+      : "text-success";
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="font-medium text-text">{equipment.label}</p>
         <p className="text-sm text-text-muted">
-          {equipment.type} ·{" "}
-          <span className={equipment.is_disabled ? "text-danger" : "text-success"}>
-            {equipment.is_disabled ? "Inhabilitado" : "Operativo"}
-          </span>
+          {equipment.type} · <span className={statusColor}>{statusLabel}</span>
         </p>
       </div>
-      <div className="flex shrink-0 gap-2">
+      <div className="flex flex-wrap shrink-0 gap-2">
+        <button
+          type="button"
+          onClick={() => setShowQr(true)}
+          className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-text transition-colors hover:bg-surface-muted"
+        >
+          Ver QR
+        </button>
         <button
           type="button"
           disabled={isSaving}
@@ -86,6 +103,14 @@ export function EquipmentDetailPanel({
           Cerrar
         </button>
       </div>
+
+      {showQr && (
+        <EquipmentQrModal
+          equipmentId={equipment.id}
+          label={equipment.label}
+          onClose={() => setShowQr(false)}
+        />
+      )}
     </div>
   );
 }

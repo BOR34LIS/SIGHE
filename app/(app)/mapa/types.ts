@@ -17,6 +17,7 @@ export type Equipment = {
   x_position: number;
   y_position: number;
   is_disabled: boolean;
+  has_open_report: boolean;
 };
 
 export const EQUIPMENT_TYPE_PRESETS = [
