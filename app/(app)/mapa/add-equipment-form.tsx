@@ -1,23 +1,36 @@
 "use client";
 
 import { useState } from "react";
+// importacion del cliente de supabase e importacion de tipos y presets de equipos.
 import { createClient } from "@/lib/supabase/client";
 import { EQUIPMENT_TYPE_PRESETS, type Equipment } from "./types";
 
+// Constantes para el modal de agregar equipo
 export function AddEquipmentButton({
+  //
   floorId,
   onAdded,
 }: {
+  // A que piso se va a asociar el equipo nuevo.
   floorId: string;
+  // Callback hacia el padre (FloorCanvas): este boton no guarda la lista de
+  // equipos, solo avisa que se creo uno nuevo y le pasa el objeto completo (con id generado por la DB).
   onAdded: (equipment: Equipment) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [type, setType] = useState<string>(EQUIPMENT_TYPE_PRESETS[0]);
+  // Texto libre que solo se usa si el tipo elegido es "Otro".
   const [customType, setCustomType] = useState("");
+  // Nombre/identificador que el usuario le pone al equipo (ej. "PC Recepcion").
   const [label, setLabel] = useState("");
+  // Deshabilita el boton y muestra "Guardando..."
   const [isSaving, setIsSaving] = useState(false);
+  // Mensaje de error (validacion o fallo de Supabase); null = sin error.
   const [error, setError] = useState<string | null>(null);
 
+
+  // Vuelve el formulario a su estado inicial. Se usa al cancelar y despues
+  // de guardar con exito, para que la proxima vez que abran el modal este limpio.
   function reset() {
     setType(EQUIPMENT_TYPE_PRESETS[0]);
     setCustomType("");
@@ -26,9 +39,11 @@ export function AddEquipmentButton({
   }
 
   async function handleSubmit() {
+    // Si eligieron "Otro" se usa el texto libre; si no, el preset tal cual.
     const finalType = type === "Otro" ? customType.trim() : type;
     const finalLabel = label.trim();
 
+    // Validacion en el cliente (para no hacer la llamada a Supabase si ya sabemos que va a fallar).
     if (!finalType || !finalLabel) {
       setError("Completa el tipo y el nombre del equipo.");
       return;
@@ -38,6 +53,8 @@ export function AddEquipmentButton({
     setError(null);
 
     const supabase = createClient();
+    // Insertar un nuevo equipo en la tabla "equipment" de Supabase.
+    // Se fija x_position e y_position en 50,50 por defecto; FloorCanvas permite moverlo despues.
     const { data, error: insertError } = await supabase
       .from("equipment")
       .insert({
@@ -57,12 +74,17 @@ export function AddEquipmentButton({
       return;
     }
 
+    // has_open_report no es una columna de la tabla es un dato calculado
+    // (si el equipo tiene un reporte sin resolver) que FloorCanvas arma en
+    // memoria al cargar la lista. Un equipo recien creado nunca puede tener
+    // un reporte todavia, asi que lo fijamos en false sin volver a consultar.
     onAdded({ ...data, has_open_report: false });
     reset();
     setIsOpen(false);
   }
 
   return (
+    // Fragmento React: el boton siempre visible y el modal que solo se renderiza si isOpen es true.
     <>
       <button
         type="button"
@@ -72,7 +94,10 @@ export function AddEquipmentButton({
         + Equipo
       </button>
 
+      {/* Renderizado condicional: el modal entero no existe en el DOM a
+          menos que isOpen sea true (en vez de ocultarlo con CSS). */}
       {isOpen && (
+        // pone un overlay de fondo oscuro semi-transparente que cubre toda la pantalla.
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-lg">
             <h2 className="mb-4 font-semibold text-text">Agregar equipo</h2>
@@ -80,6 +105,7 @@ export function AddEquipmentButton({
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-text">Tipo</label>
+                {/* Recorre EQUIPMENT_TYPE_PRESETS para generar las opciones. */}
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
@@ -93,6 +119,7 @@ export function AddEquipmentButton({
                 </select>
               </div>
 
+              {/* Solo aparece si eligieron "Otro" en el select de arriba. */}
               {type === "Otro" && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-text">Especifica el tipo</label>
@@ -115,6 +142,7 @@ export function AddEquipmentButton({
                 />
               </div>
 
+              {/* Mensaje de error, solo si existe. */}
               {error && (
                 <p className="text-sm text-danger" role="alert">
                   {error}
@@ -122,6 +150,7 @@ export function AddEquipmentButton({
               )}
 
               <div className="mt-2 flex gap-2">
+                {/* Cancelar: cierra y resetea sin guardar nada. */}
                 <button
                   type="button"
                   onClick={() => {
@@ -132,6 +161,8 @@ export function AddEquipmentButton({
                 >
                   Cancelar
                 </button>
+                {/* Agregar: dispara handleSubmit; se deshabilita y cambia de
+                    texto mientras isSaving es true. */}
                 <button
                   type="button"
                   disabled={isSaving}

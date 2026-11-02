@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Equipment } from "./types";
 import { EquipmentQrModal } from "./equipment-qr-modal";
 
+// Panel de detalles para mostrar información de un equipo.
 export function EquipmentDetailPanel({
   equipment,
   isEditMode,
@@ -12,13 +13,16 @@ export function EquipmentDetailPanel({
   onUpdated,
   onDeleted,
 }: {
+  // El equipo a mostrar.
   equipment: Equipment;
   isEditMode: boolean;
   onClose: () => void;
   onUpdated: (equipment: Equipment) => void;
   onDeleted: (id: string) => void;
 }) {
+  // Deshabilita los botones mientras se hace la llamada a Supabase.
   const [isSaving, setIsSaving] = useState(false);
+  // Muestra el modal con el QR del equipo.
   const [showQr, setShowQr] = useState(false);
 
   async function handleToggleDisabled() {
