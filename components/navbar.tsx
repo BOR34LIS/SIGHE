@@ -11,6 +11,11 @@ export function Navbar({ profile }: { profile: CurrentProfile }) {
   const links = [
     { href: "/", label: "Inicio", show: true },
     { href: "/mapa", label: "Mapa", show: profile.role === "admin" || profile.role === "tecnico" },
+    {
+      href: "/reportes",
+      label: "Reportes",
+      show: profile.role === "admin" || profile.role === "tecnico",
+    },
     { href: "/admin/usuarios", label: "Usuarios", show: profile.role === "admin" },
   ].filter((link) => link.show);
 
