@@ -35,7 +35,7 @@ export function EquipmentQrModal({
     // de que ignore su resultado si el componente se desmonta antes de que
     // termine.
     let cancelled = false;
-    composeQrImage(reportUrl).then((url) => {
+    composeQrImage(reportUrl, label).then((url) => {
       if (!cancelled) setDataUrl(url);
     });
     // Funcion de limpieza: React la llama si el efecto se vuelve a correr o
@@ -43,7 +43,7 @@ export function EquipmentQrModal({
     return () => {
       cancelled = true;
     };
-  }, [reportUrl]);
+  }, [reportUrl, label]);
 
   return (
     // Mismo patron de overlay que add-equipment-form.tsx: fondo oscuro fijo

@@ -14,6 +14,7 @@ export type Equipment = {
   floor_id: string;
   type: string;
   label: string;
+  icon: string;
   x_position: number;
   y_position: number;
   is_disabled: boolean;
@@ -22,8 +23,13 @@ export type Equipment = {
 
 export const EQUIPMENT_TYPE_PRESETS = [
   "Computador",
+  "Monitor",
   "Impresora",
+  "Escáner",
   "Teléfono",
   "Fax",
+  "Televisor",
+  "Router",
+  "Proyector",
   "Otro",
 ] as const;

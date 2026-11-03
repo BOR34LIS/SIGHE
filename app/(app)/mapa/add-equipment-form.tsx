@@ -4,10 +4,10 @@ import { useState } from "react";
 // importacion del cliente de supabase e importacion de tipos y presets de equipos.
 import { createClient } from "@/lib/supabase/client";
 import { EQUIPMENT_TYPE_PRESETS, type Equipment } from "./types";
+import { ICON_CATALOG, PRESET_ICON_KEYS, type IconKey } from "./icon-catalog";
 
-// Constantes para el modal de agregar equipo
+// Este componente es un boton que abre un modal para agregar un nuevo equipo al piso actual.
 export function AddEquipmentButton({
-  //
   floorId,
   onAdded,
 }: {
@@ -21,6 +21,9 @@ export function AddEquipmentButton({
   const [type, setType] = useState<string>(EQUIPMENT_TYPE_PRESETS[0]);
   // Texto libre que solo se usa si el tipo elegido es "Otro".
   const [customType, setCustomType] = useState("");
+  // Icono elegido a mano, solo relevante cuando type === "Otro" (para los
+  // presets el icono se resuelve solo, via PRESET_ICON_KEYS mas abajo).
+  const [customIcon, setCustomIcon] = useState<IconKey>("generic");
   // Nombre/identificador que el usuario le pone al equipo (ej. "PC Recepcion").
   const [label, setLabel] = useState("");
   // Deshabilita el boton y muestra "Guardando..."
@@ -34,6 +37,7 @@ export function AddEquipmentButton({
   function reset() {
     setType(EQUIPMENT_TYPE_PRESETS[0]);
     setCustomType("");
+    setCustomIcon("generic");
     setLabel("");
     setError(null);
   }
@@ -42,6 +46,12 @@ export function AddEquipmentButton({
     // Si eligieron "Otro" se usa el texto libre; si no, el preset tal cual.
     const finalType = type === "Otro" ? customType.trim() : type;
     const finalLabel = label.trim();
+    // Para un preset el icono ya viene decidido (PRESET_ICON_KEYS); para
+    // "Otro" se usa el que la persona eligio en la grilla de abajo.
+    const finalIcon =
+      type === "Otro"
+        ? customIcon
+        : (PRESET_ICON_KEYS[type as keyof typeof PRESET_ICON_KEYS] ?? "generic");
 
     // Validacion en el cliente (para no hacer la llamada a Supabase si ya sabemos que va a fallar).
     if (!finalType || !finalLabel) {
@@ -61,10 +71,11 @@ export function AddEquipmentButton({
         floor_id: floorId,
         type: finalType,
         label: finalLabel,
+        icon: finalIcon,
         x_position: 50,
         y_position: 50,
       })
-      .select("id, floor_id, type, label, x_position, y_position, is_disabled")
+      .select("id, floor_id, type, label, icon, x_position, y_position, is_disabled")
       .single();
 
     setIsSaving(false);
@@ -119,17 +130,42 @@ export function AddEquipmentButton({
                 </select>
               </div>
 
-              {/* Solo aparece si eligieron "Otro" en el select de arriba. */}
+              {/* Solo aparece si eligieron "Otro" en el select de arriba: para
+                  los presets el icono ya esta decidido (PRESET_ICON_KEYS en
+                  icon-catalog.ts), asi que no hace falta preguntar nada mas. */}
               {type === "Otro" && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-text">Especifica el tipo</label>
-                  <input
-                    value={customType}
-                    onChange={(e) => setCustomType(e.target.value)}
-                    placeholder="Ej: Escáner"
-                    className="h-11 rounded-lg border border-border bg-surface-muted px-3 text-base text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-text">Especifica el tipo</label>
+                    <input
+                      value={customType}
+                      onChange={(e) => setCustomType(e.target.value)}
+                      placeholder="Ej: Impresora 3D"
+                      className="h-11 rounded-lg border border-border bg-surface-muted px-3 text-base text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-text">Icono</label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {ICON_CATALOG.map(({ key, label: iconLabel, Icon }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          title={iconLabel}
+                          onClick={() => setCustomIcon(key)}
+                          className={`flex h-11 items-center justify-center rounded-lg border transition-colors ${
+                            customIcon === key
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border text-text hover:bg-surface-muted"
+                          }`}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="flex flex-col gap-1.5">

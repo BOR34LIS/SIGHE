@@ -82,7 +82,7 @@ export function FloorCanvas({
     (async () => {
       const { data: equipmentData } = await supabase
         .from("equipment")
-        .select("id, floor_id, type, label, x_position, y_position, is_disabled")
+        .select("id, floor_id, type, label, icon, x_position, y_position, is_disabled")
         .eq("floor_id", floor.id);
 
       // Segunda consulta: cuales de estos equipos tienen un reporte sin

@@ -5,6 +5,10 @@ const QR_SIZE = 280;
 const PADDING = 24;
 const LINE_HEIGHT = 26;
 const FONT = "bold 20px sans-serif";
+// Mas grande que el mensaje: es el dato que hay que leer de un vistazo al
+// pegar el QR impreso junto al equipo, para no confundirlo con otro.
+const LABEL_LINE_HEIGHT = 32;
+const LABEL_FONT = "bold 26px sans-serif";
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(" ");
@@ -35,9 +39,11 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 /**
  * Genera un PNG (como data URL) con el mensaje de invitación a reportar
- * impreso arriba del QR, para que quede todo en una sola imagen imprimible.
+ * arriba del QR y el nombre del equipo abajo, para que quede todo en una
+ * sola imagen imprimible — y asi, pegado junto al equipo, no haya forma de
+ * confundirlo con el QR de otro.
  */
-export async function composeQrImage(reportUrl: string): Promise<string> {
+export async function composeQrImage(reportUrl: string, label: string): Promise<string> {
   const qrDataUrl = await QRCode.toDataURL(reportUrl, { width: QR_SIZE, margin: 1 });
   const qrImage = await loadImage(qrDataUrl);
 
@@ -47,23 +53,37 @@ export async function composeQrImage(reportUrl: string): Promise<string> {
 
   // measureText necesita el font ya seteado, aunque el canvas aun tenga tamano por defecto.
   ctx.font = FONT;
-  const lines = wrapText(ctx, QR_MESSAGE, QR_SIZE);
-  const textBlockHeight = lines.length * LINE_HEIGHT;
+  const messageLines = wrapText(ctx, QR_MESSAGE, QR_SIZE);
+  const messageBlockHeight = messageLines.length * LINE_HEIGHT;
+
+  ctx.font = LABEL_FONT;
+  const labelLines = wrapText(ctx, label, QR_SIZE);
+  const labelBlockHeight = labelLines.length * LABEL_LINE_HEIGHT;
 
   canvas.width = QR_SIZE + PADDING * 2;
-  canvas.height = PADDING + textBlockHeight + PADDING + QR_SIZE + PADDING;
+  canvas.height =
+    PADDING + messageBlockHeight + PADDING + QR_SIZE + PADDING + labelBlockHeight + PADDING;
 
   // Cambiar el tamano del canvas resetea el contexto: hay que volver a configurarlo.
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.textAlign = "center";
+
   ctx.fillStyle = "#18181b";
   ctx.font = FONT;
-  ctx.textAlign = "center";
-  lines.forEach((line, i) => {
+  messageLines.forEach((line, i) => {
     ctx.fillText(line, canvas.width / 2, PADDING + LINE_HEIGHT * (i + 1) - 7);
   });
 
-  ctx.drawImage(qrImage, PADDING, PADDING + textBlockHeight + PADDING, QR_SIZE, QR_SIZE);
+  const qrY = PADDING + messageBlockHeight + PADDING;
+  ctx.drawImage(qrImage, PADDING, qrY, QR_SIZE, QR_SIZE);
+
+  ctx.fillStyle = "#18181b";
+  ctx.font = LABEL_FONT;
+  const labelStartY = qrY + QR_SIZE + PADDING;
+  labelLines.forEach((line, i) => {
+    ctx.fillText(line, canvas.width / 2, labelStartY + LABEL_LINE_HEIGHT * (i + 1) - 8);
+  });
 
   return canvas.toDataURL("image/png");
 }

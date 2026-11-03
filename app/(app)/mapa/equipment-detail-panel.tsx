@@ -42,7 +42,7 @@ export function EquipmentDetailPanel({
       .from("equipment")
       .update({ is_disabled: !equipment.is_disabled })
       .eq("id", equipment.id)
-      .select("id, floor_id, type, label, x_position, y_position, is_disabled")
+      .select("id, floor_id, type, label, icon, x_position, y_position, is_disabled")
       .single();
     setIsSaving(false);
 
