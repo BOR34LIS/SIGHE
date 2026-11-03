@@ -16,6 +16,11 @@ export function Navbar({ profile }: { profile: CurrentProfile }) {
       label: "Reportes",
       show: profile.role === "admin" || profile.role === "tecnico",
     },
+    {
+      href: "/inventario",
+      label: "Inventario",
+      show: profile.role === "admin" || profile.role === "tecnico",
+    },
     { href: "/admin/usuarios", label: "Usuarios", show: profile.role === "admin" },
   ].filter((link) => link.show);
 
