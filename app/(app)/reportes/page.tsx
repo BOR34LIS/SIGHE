@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { TicketCard } from "./ticket-card";
-import { STATUS_LABELS, type TicketRow } from "./types";
+import { STATUS_LABELS, type SparePartOption, type TicketRow } from "./types";
 
 export const metadata: Metadata = {
   title: "Reportes · SIGHE",
@@ -25,10 +25,13 @@ export default async function ReportesPage({
   const { sort = "recent", floor = "", type = "", status = "" } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: floors }, { data: equipmentRows }] = await Promise.all([
+  const [{ data: floors }, { data: equipmentRows }, { data: sparePartRows }] = await Promise.all([
     supabase.from("floors").select("id, name").order("name"),
     supabase.from("equipment").select("type").order("type"),
+    supabase.from("spare_parts").select("id, name, unit, stock").order("name"),
   ]);
+
+  const spareParts = (sparePartRows ?? []) as SparePartOption[];
 
   const equipmentTypes = Array.from(new Set((equipmentRows ?? []).map((e) => e.type)));
 
@@ -123,7 +126,7 @@ export default async function ReportesPage({
       ) : (
         <div className="flex flex-col gap-3">
           {tickets.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} />
+            <TicketCard key={ticket.id} ticket={ticket} spareParts={spareParts} />
           ))}
         </div>
       )}

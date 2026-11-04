@@ -1,3 +1,4 @@
+import type { SparePart } from "../inventario/types";
 export type TicketStatus = "pendiente" | "en_revision" | "resuelto" | "cancelado";
 
 // El tipo TicketRow representa una fila de ticket de reparacion, con sus campos principales y
@@ -33,3 +34,5 @@ export const STATUS_BADGE_CLASSES: Record<TicketStatus, string> = {
   resuelto: "bg-success/15 text-success",
   cancelado: "bg-text-subtle/15 text-text-subtle",
 };
+// Datos mínimos de un repuesto para el selector del modal "¿Se usaron repuestos?".
+export type SparePartOption = Pick<SparePart, "id" | "name" | "unit" | "stock">;
