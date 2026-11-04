@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { createSparePart, type SparePartFormState } from "./actions";
-import { UNIT_OPTIONS } from "./types";
 import { FormField } from "@/components/ui/form-field";
 import { SubmitButton } from "@/components/ui/submit-button";
 
@@ -38,24 +37,7 @@ export function AddSparePartForm() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="unit" className="text-sm font-medium text-text">
-            Unidad
-          </label>
-          <select
-            id="unit"
-            name="unit"
-            defaultValue="unidad"
-            className="h-11 rounded-lg border border-border bg-surface-muted px-3 text-base text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            {UNIT_OPTIONS.map((unit) => (
-              <option key={unit} value={unit}>
-                {unit}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
           id="stock"
           name="stock"

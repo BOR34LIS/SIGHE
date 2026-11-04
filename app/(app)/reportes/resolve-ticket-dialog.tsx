@@ -76,7 +76,7 @@ export function ResolveTicketDialog({
     for (const [id, quantity] of totals) {
       const part = spareParts.find((p) => p.id === id);
       if (part && quantity > part.stock) {
-        setError(`Stock insuficiente de "${part.name}": quedan ${part.stock} ${part.unit}.`);
+        setError(`Stock insuficiente de "${part.name}": quedan ${part.stock}.`);
         return;
       }
     }
@@ -170,7 +170,7 @@ export function ResolveTicketDialog({
                         <option value="">Selecciona un repuesto</option>
                         {spareParts.map((part) => (
                           <option key={part.id} value={part.id} disabled={part.stock === 0}>
-                            {part.name} ({part.stock} {part.unit} disponibles)
+                            {part.name} ({part.stock} disponibles)
                           </option>
                         ))}
                       </select>

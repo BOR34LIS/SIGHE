@@ -26,7 +26,6 @@ export async function createSparePart(
 
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const unit = String(formData.get("unit") ?? "").trim() || "unidad";
   const stock = Number(formData.get("stock") ?? 0);
   const minStock = Number(formData.get("minStock") ?? 0);
 
@@ -43,7 +42,6 @@ export async function createSparePart(
   const { error } = await supabase.from("spare_parts").insert({
     name,
     description: description || null,
-    unit,
     stock,
     min_stock: minStock,
   });

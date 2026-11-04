@@ -7,6 +7,3 @@ export type SparePart = {
   stock: number;
   min_stock: number;
 };
-
-// Unidades de medida que se ofrecen al crear un repuesto.
-export const UNIT_OPTIONS = ["unidad", "metro", "gramo", "litro", "caja"] as const;

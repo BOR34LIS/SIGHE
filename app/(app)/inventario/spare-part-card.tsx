@@ -20,7 +20,7 @@ export function SparePartCard({ part, isAdmin }: { part: SparePart; isAdmin: boo
         </div>
         {part.description && <p className="text-sm text-text-muted">{part.description}</p>}
         <p className="mt-1 text-xs text-text-subtle">
-          Stock mínimo: {part.min_stock} {part.unit}
+          Stock mínimo: {part.min_stock}
         </p>
       </div>
 
@@ -33,7 +33,7 @@ export function SparePartCard({ part, isAdmin }: { part: SparePart; isAdmin: boo
               aria-label={`Restar 1 a ${part.name}`}
               className="h-9 w-9 rounded-lg border border-border text-text transition-colors hover:bg-surface-muted disabled:opacity-40"
             >
-              −
+              
             </button>
           </form>
         )}
@@ -42,7 +42,7 @@ export function SparePartCard({ part, isAdmin }: { part: SparePart; isAdmin: boo
           <span className={`text-lg font-semibold ${isLowStock ? "text-warning" : "text-text"}`}>
             {part.stock}
           </span>
-          <span className="text-xs text-text-subtle">{part.unit}</span>
+          <span className="text-xs text-text-subtle">unidades</span>
         </div>
 
         {isAdmin && (
@@ -52,7 +52,7 @@ export function SparePartCard({ part, isAdmin }: { part: SparePart; isAdmin: boo
               aria-label={`Sumar 1 a ${part.name}`}
               className="h-9 w-9 rounded-lg border border-border text-text transition-colors hover:bg-surface-muted"
             >
-              +
+              
             </button>
           </form>
         )}
