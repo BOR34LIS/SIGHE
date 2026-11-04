@@ -1,5 +1,11 @@
-import { takeTicket, resolveTicket } from "./actions";
-import { STATUS_BADGE_CLASSES, STATUS_LABELS, type TicketRow } from "./types";
+import { takeTicket } from "./actions";
+import { ResolveTicketDialog } from "./resolve-ticket-dialog";
+import {
+  STATUS_BADGE_CLASSES,
+  STATUS_LABELS,
+  type SparePartOption,
+  type TicketRow,
+} from "./types";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("es-CL", {
@@ -11,9 +17,14 @@ function formatDate(iso: string) {
   });
 }
 
-export function TicketCard({ ticket }: { ticket: TicketRow }) {
+export function TicketCard({
+  ticket,
+  spareParts,
+}: {
+  ticket: TicketRow;
+  spareParts: SparePartOption[];
+}) {
   const takeTicketWithId = takeTicket.bind(null, ticket.id);
-  const resolveTicketWithId = resolveTicket.bind(null, ticket.id);
 
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
@@ -61,14 +72,7 @@ export function TicketCard({ ticket }: { ticket: TicketRow }) {
       )}
 
       {ticket.status === "en_revision" && (
-        <form action={resolveTicketWithId} className="mt-1">
-          <button
-            type="submit"
-            className="h-9 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
-          >
-            Marcar como resuelto
-          </button>
-        </form>
+        <ResolveTicketDialog ticketId={ticket.id} spareParts={spareParts} />
       )}
     </div>
   );
