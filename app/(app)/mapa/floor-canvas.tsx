@@ -63,6 +63,16 @@ export function FloorCanvas({
   // pantalla (getBoundingClientRect) y convertir coordenadas del puntero a
   // porcentaje de posicion dentro de el.
   const containerRef = useRef<HTMLDivElement>(null);
+  // Copia de "equipment" en un ref: la suscripcion de Realtime de mas abajo
+  // se arma una sola vez por piso (no se quiere volver a suscribir en cada
+  // arrastre), pero su callback igual necesita saber la lista de equipos
+  // MAS RECIENTE para filtrar los cambios que le interesan. No se puede
+  // escribir el ref directo durante el render (React lo prohíbe), por eso
+  // se actualiza en un efecto aparte, uno que corre despues de cada render.
+  const equipmentRef = useRef<Equipment[]>([]);
+  useEffect(() => {
+    equipmentRef.current = equipment;
+  }, [equipment]);
 
   // Carga los equipos del piso cada vez que cambia floor.id. En la practica
   // FloorCanvas se remonta entero al cambiar de piso (MapView le pone un
@@ -117,11 +127,67 @@ export function FloorCanvas({
     };
   }, [floor.id]);
 
+  // Suscripcion a Realtime: cada vez que cambia un ticket de reparacion, se
+  // revisa si el equipo afectado esta en este piso y, si es asi, se vuelve a
+  // consultar la DB para ver si tiene al menos un ticket abierto.
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    (async () => {
+      // El socket de Realtime necesita el JWT de la sesion para que RLS lo
+      // deje ver los tickets de su empresa. Si nos suscribimos ANTES de que
+      // esto termine, el servidor puede tratarnos como anonimos y no
+      // mandarnos nunca ningun evento — sin ningun error visible.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (session) supabase.realtime.setAuth(session.access_token);
+
+      channel = supabase
+        .channel(`repair-tickets-floor-${floor.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "repair_tickets" },
+          async (payload) => {
+            const row = (payload.new ?? payload.old) as { equipment_id?: string } | null;
+            const equipmentId = row?.equipment_id;
+            if (!equipmentId) return;
+            if (!equipmentRef.current.some((item) => item.id === equipmentId)) return;
+
+            // Se vuelve a preguntar en vez de confiar en el status de ESTE
+            // ticket: puede haber mas de un ticket por equipo, y lo que
+            // importa es si queda al menos uno abierto.
+            const { count } = await supabase
+              .from("repair_tickets")
+              .select("id", { count: "exact", head: true })
+              .eq("equipment_id", equipmentId)
+              .in("status", ["pendiente", "en_revision"]);
+
+            setEquipment((prev) =>
+              prev.map((item) =>
+                item.id === equipmentId ? { ...item, has_open_report: (count ?? 0) > 0 } : item
+              )
+            );
+          }
+        )
+        .subscribe((status) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            console.error("Realtime (repair_tickets) no se pudo suscribir:", status);
+          }
+        });
+    })();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [floor.id]);
+
   // Convierte una posicion de pantalla (clientX/clientY, en pixeles) a un
-  // porcentaje relativo al lienzo (0-100), que es como se guarda la posicion
-  // de cada equipo. getBoundingClientRect() ya devuelve el tamaño "visual"
-  // del lienzo (despues de aplicarle el zoom), por eso este calculo funciona
-  // igual sin importar en que nivel de zoom este el usuario.
+  // porcentaje relativo al lienzo (0-100).
   function positionFromPointer(clientX: number, clientY: number) {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return { x: 50, y: 50 };
@@ -134,10 +200,7 @@ export function FloorCanvas({
   }
 
   // Se dispara en CADA movimiento del puntero sobre el lienzo, no solo
-  // cuando se esta arrastrando un equipo — por eso el primer chequeo corta
-  // temprano si no hay nada en draggingId.current (puesto por EquipmentNode
-  // al tocarlo). Actualiza solo el estado local (optimista, para que se vea
-  // fluido); el guardado real en la base de datos pasa en handlePointerUp.
+  // cuando se esta arrastrando un equipo.
   function handlePointerMove(e: React.PointerEvent) {
     if (!isEditMode || !draggingId.current) return;
     const { x, y } = positionFromPointer(e.clientX, e.clientY);
