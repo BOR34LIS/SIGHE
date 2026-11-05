@@ -38,7 +38,7 @@ export default async function ReportesPage({
   // Consulta de tickets con filtros y ordenamiento. Se hace en el servidor (server component) para no exponer
   // la tabla completa de tickets al cliente, y para poder usar revalidatePath() en takeTicket/resolveTicket.
   let query = supabase.from("repair_tickets").select(
-    `id, problem_type, description, status, created_at,
+    `id, problem_type, description, status, created_at, resolved_at,
      equipment!inner(id, label, type, floor_id, floors(name)),
      reporter:profiles!repair_tickets_reported_by_fkey(full_name, email),
      assignee:profiles!repair_tickets_assigned_to_fkey(full_name, email)`
@@ -124,7 +124,7 @@ export default async function ReportesPage({
       {tickets.length === 0 ? (
         <p className="text-sm text-text-muted">No hay reportes que coincidan con este filtro.</p>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5">
           {tickets.map((ticket) => (
             <TicketCard key={ticket.id} ticket={ticket} spareParts={spareParts} />
           ))}

@@ -27,9 +27,12 @@ export function TicketCard({
   const takeTicketWithId = takeTicket.bind(null, ticket.id);
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        {/* min-w-0 es necesario para que este bloque SI pueda achicarse y
+            dejar que el texto haga wrap, sin esto, un label largo empuja
+            la burbuja de estado fuera de la tarjeta en vez de envolver. */}
+        <div className="min-w-0 flex-1">
           <p className="font-medium text-text">
             {ticket.equipment?.label ?? "Equipo eliminado"}
             <span className="ml-2 text-sm font-normal text-text-muted">
@@ -49,19 +52,20 @@ export function TicketCard({
 
       <div className="text-sm text-text">
         <span className="font-medium">{ticket.problem_type}</span>
-        {ticket.description && <p className="mt-0.5 text-text-muted">{ticket.description}</p>}
+        {ticket.description && <p className="mt-1 text-text-muted">{ticket.description}</p>}
       </div>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-subtle">
+      <div className="flex flex-col gap-1.5 border-t border-border pt-3 text-xs text-text-subtle">
         <span>Reportado por {ticket.reporter?.full_name ?? ticket.reporter?.email ?? "—"}</span>
-        <span>{formatDate(ticket.created_at)}</span>
+        <span>Recibido: {formatDate(ticket.created_at)}</span>
+        {ticket.resolved_at && <span>Resuelto: {formatDate(ticket.resolved_at)}</span>}
         {ticket.assignee && (
           <span>Asignado a {ticket.assignee.full_name ?? ticket.assignee.email}</span>
         )}
       </div>
 
       {ticket.status === "pendiente" && (
-        <form action={takeTicketWithId} className="mt-1">
+        <form action={takeTicketWithId}>
           <button
             type="submit"
             className="h-9 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover"

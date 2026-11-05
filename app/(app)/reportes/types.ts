@@ -9,6 +9,7 @@ export type TicketRow = {
   description: string | null;
   status: TicketStatus;
   created_at: string;
+  resolved_at: string | null;
   equipment: {
     id: string;
     label: string;
