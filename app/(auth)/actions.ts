@@ -9,6 +9,50 @@ export type AuthFormState = {
   success?: string;
 };
 
+type PendingLinkResult = { error?: string };
+
+// Esta función hace el último paso del registro: asignarle una empresa a
+// la cuenta (ya sea creando una nueva, o uniéndose con un código).
+// pending_company_name y pending_join_code se guardan en los metadatos del
+// usuario de auth (no en una tabla) para poder leerlos después, en ese
+// segundo caso.
+async function linkPendingCompany(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: { id: string; user_metadata: Record<string, unknown> | null }
+): Promise<PendingLinkResult> {
+  const pendingCompanyName = user.user_metadata?.pending_company_name as string | undefined;
+  const pendingJoinCode = user.user_metadata?.pending_join_code as string | undefined;
+
+  if (!pendingCompanyName && !pendingJoinCode) return {};
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, company_id")
+    .eq("id", user.id)
+    .single();
+
+  // Si el perfil ya tiene empresa, o ya no es "usuario", es porque ya se
+  // vinculó antes (o nunca correspondía), no se hace nada mas.
+  if (profile?.role !== "usuario" || profile.company_id) return {};
+
+  if (pendingCompanyName) {
+    const { error } = await supabase.rpc("register_company_admin", {
+      p_company_name: pendingCompanyName,
+    });
+    if (error) {
+      return error.message.includes("Ya existe una empresa")
+        ? { error: "Ya existe una empresa registrada con ese nombre." }
+        : { error: "No se pudo crear la empresa. Intenta nuevamente." };
+    }
+    return {};
+  }
+
+  const { error } = await supabase.rpc("join_company_with_code", {
+    p_join_code: pendingJoinCode,
+  });
+  return error ? { error: "Código de empresa inválido." } : {};
+}
+
 export async function login(
   _prevState: AuthFormState,
   formData: FormData
@@ -33,22 +77,14 @@ export async function login(
     return { error: "Correo o contraseña incorrectos." };
   }
 
-  // Si el signup quedó pendiente porque no había sesión todavía (correo sin
-  // confirmar), termina de registrar la empresa ahora que ya hay una sesión
-  // real — register_company_admin usa auth.uid(), nunca un id que venga del
-  // cliente, así que solo puede completar el registro de ESTA cuenta.
-  const pendingCompanyName = data.user.user_metadata?.pending_company_name;
-  if (pendingCompanyName) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, company_id")
-      .eq("id", data.user.id)
-      .single();
-
-    if (profile?.role === "usuario" && !profile.company_id) {
-      await supabase.rpc("register_company_admin", { p_company_name: pendingCompanyName });
-    }
-  }
+  // Si quedó pendiente vincular una empresa (porque faltaba confirmar el
+  // correo), aquí ya hay una sesión real y se intenta terminar ese paso.
+  //
+  // No importa si falla (ej. el código ya no es válido) — no queremos
+  // bloquear el login por eso. En el peor caso, la persona entra igual pero
+  // sin empresa, y puede reintentar con un código nuevo desde el formulario
+  // del home (ver app/(app)/join-company-form.tsx).
+  await linkPendingCompany(supabase, data.user);
 
   redirect(next.startsWith("/") ? next : "/");
 }
@@ -57,13 +93,16 @@ export async function signup(
   _prevState: AuthFormState,
   formData: FormData
 ): Promise<AuthFormState> {
+  const mode = String(formData.get("mode") ?? "create");
+  const isJoinMode = mode === "join";
   const fullName = String(formData.get("fullName") ?? "").trim();
   const companyName = String(formData.get("companyName") ?? "").trim();
+  const joinCode = String(formData.get("joinCode") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-  if (!fullName || !companyName || !email || !password) {
+  if (!fullName || !email || !password || (isJoinMode ? !joinCode : !companyName)) {
     return { error: "Completa todos los campos." };
   }
 
@@ -80,11 +119,12 @@ export async function signup(
     email,
     password,
     options: {
-      // pending_company_name queda en los metadatos del usuario de auth
-      // (no en una tabla) para el caso en que todavía no haya sesión (correo
-      // sin confirmar), login() lo lee ahí para terminar el registro apenas
-      // haya una sesión real.
-      data: { full_name: fullName, pending_company_name: companyName },
+      // Se guarda aquí (en los metadatos del usuario, no en una tabla) por
+      // si todavía no hay sesión (correo sin confirmar). login() los va a
+      // leer después para terminar el registro.
+      data: isJoinMode
+        ? { full_name: fullName, pending_join_code: joinCode }
+        : { full_name: fullName, pending_company_name: companyName },
     },
   });
 
@@ -105,23 +145,18 @@ export async function signup(
     };
   }
 
-  // Ya hay sesión (confirmación de correo desactivada o autoconfirmada)
-  // register_company_admin ya no recibe ningún id, usa auth.uid()
-  // solo puede registrar la empresa de la cuenta que está autenticada ahora mismo.
-  const { error: companyError } = await supabase.rpc("register_company_admin", {
-    p_company_name: companyName,
-  });
+  // Si llegamos aquí, ya hay sesión (la confirmación de correo está
+  // desactivada, o se autoconfirma). Se reutiliza la misma función que usa
+  // login() para el caso en que faltaba la sesión.
+  const { error: linkError } = await linkPendingCompany(supabase, data.user);
 
-  if (companyError) {
-    // El usuario de auth ya se creó, lo removemos para que pueda reintentar limpio
-    // (ej. con otro nombre de empresa) sin quedar con una cuenta huérfana.
+  if (linkError) {
+    // La cuenta de auth ya quedó creada, pero sin empresa asignada. La
+    // borramos para que la persona pueda reintentar de cero (ej. con otro
+    // nombre de empresa o código), en vez de quedar con una cuenta huérfana.
     const adminClient = createAdminClient();
     await adminClient.auth.admin.deleteUser(data.user.id);
-
-    if (companyError.message.includes("Ya existe una empresa")) {
-      return { error: "Ya existe una empresa registrada con ese nombre." };
-    }
-    return { error: "No se pudo crear la empresa. Intenta nuevamente." };
+    return { error: linkError };
   }
 
   redirect("/");

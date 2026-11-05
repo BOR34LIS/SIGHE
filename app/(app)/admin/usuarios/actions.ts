@@ -9,9 +9,6 @@ export type CreateUserState = {
   success?: { email: string; tempPassword: string };
 };
 
-const ALLOWED_ROLES = ["usuario", "tecnico"] as const;
-type AllowedRole = (typeof ALLOWED_ROLES)[number];
-
 // Evita caracteres ambiguos (0/O, 1/l/I) para que sea fácil de transcribir.
 const PASSWORD_CHARSET = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
 
@@ -23,6 +20,7 @@ function generateTempPassword(length = 12): string {
   return password;
 }
 
+// Devuelve el id de la empresa del admin logueado, o null si no es admin o no tiene empresa.
 async function getAuthorizedAdmin() {
   const supabase = await createClient();
   const {
@@ -42,6 +40,7 @@ async function getAuthorizedAdmin() {
   return { companyId: profile.company_id };
 }
 
+// Crea un usuario con el rol de técnico y lo vincula a la empresa del admin logueado.
 export async function createCompanyUser(
   _prevState: CreateUserState,
   formData: FormData
@@ -52,14 +51,9 @@ export async function createCompanyUser(
   }
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const role = String(formData.get("role") ?? "");
 
   if (!email) {
     return { error: "Ingresa un correo." };
-  }
-
-  if (!ALLOWED_ROLES.includes(role as AllowedRole)) {
-    return { error: "Rol inválido." };
   }
 
   const tempPassword = generateTempPassword();
@@ -82,7 +76,7 @@ export async function createCompanyUser(
     .from("profiles")
     .update({
       company_id: admin.companyId,
-      role,
+      role: "tecnico",
       must_change_password: true,
     })
     .eq("id", created.user.id);
@@ -95,4 +89,25 @@ export async function createCompanyUser(
   }
 
   return { success: { email, tempPassword } };
+}
+
+export type RegenerateJoinCodeState = { error?: string; joinCode?: string };
+
+// Invalida el código actual (ej. si se filtró) y entrega uno nuevo — ver
+// migración company_join_code: regenerate_company_join_code ya valida que
+// quien llama sea admin de su propia empresa.
+export async function regenerateJoinCode(): Promise<RegenerateJoinCodeState> {
+  const admin = await getAuthorizedAdmin();
+  if (!admin) {
+    return { error: "No tienes permisos para realizar esta acción." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("regenerate_company_join_code");
+
+  if (error) {
+    return { error: "No se pudo regenerar el código. Intenta nuevamente." };
+  }
+
+  return { joinCode: data as string };
 }

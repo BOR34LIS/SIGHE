@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { signup, type AuthFormState } from "../actions";
 import { FormField } from "@/components/ui/form-field";
@@ -8,8 +8,13 @@ import { SubmitButton } from "@/components/ui/submit-button";
 
 const initialState: AuthFormState = {};
 
+type Mode = "create" | "join";
+
 export function SignupForm() {
   const [state, formAction] = useActionState(signup, initialState);
+  // Decide que campo mostrar (nombre de empresa vs codigo); la validacion
+  // real de que hace cada modo pasa en el servidor (actions.ts).
+  const [mode, setMode] = useState<Mode>("create");
 
   if (state.success) {
     return (
@@ -24,20 +29,73 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <div className="rounded-lg border border-border bg-surface-muted px-3 py-2.5 text-sm text-text-muted">
-        Este registro crea una <strong className="font-medium text-text">cuenta de administrador</strong>{" "}
-        para una empresa nueva. Si tu empresa ya usa SIGHE, pide a tu administrador que te cree una
-        cuenta en vez de registrarte aquí.
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-text">Tipo de registro</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("create")}
+            className={`h-11 rounded-lg border text-sm font-medium transition-colors ${
+              mode === "create"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border text-text hover:bg-surface-muted"
+            }`}
+          >
+            Crear empresa
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("join")}
+            className={`h-11 rounded-lg border text-sm font-medium transition-colors ${
+              mode === "join"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border text-text hover:bg-surface-muted"
+            }`}
+          >
+            Unirme con código
+          </button>
+        </div>
+        {/* input oculto: lo unico que actions.ts necesita para decidir el flujo. */}
+        <input type="hidden" name="mode" value={mode} />
       </div>
-      <FormField
-        id="companyName"
-        name="companyName"
-        type="text"
-        label="Nombre de la empresa"
-        placeholder="Mi Empresa SpA"
-        autoComplete="organization"
-        required
-      />
+
+      <div className="rounded-lg border border-border bg-surface-muted px-3 py-2.5 text-sm text-text-muted">
+        {mode === "create" ? (
+          <>
+            Esto crea una <strong className="font-medium text-text">cuenta de administrador</strong>{" "}
+            para una empresa nueva. Si tu empresa ya usa SIGHE, pide a tu administrador que te cree
+            una cuenta en vez de registrarte aquí.
+          </>
+        ) : (
+          <>
+            Esto crea una cuenta para <strong className="font-medium text-text">reportar</strong>{" "}
+            equipos de una empresa que ya usa SIGHE. Pídele el código a un administrador de esa
+            empresa — solo podrás reportar equipos de ESA empresa, no de otras.
+          </>
+        )}
+      </div>
+
+      {mode === "create" ? (
+        <FormField
+          id="companyName"
+          name="companyName"
+          type="text"
+          label="Nombre de la empresa"
+          placeholder="Mi Empresa SpA"
+          autoComplete="organization"
+          required
+        />
+      ) : (
+        <FormField
+          id="joinCode"
+          name="joinCode"
+          type="text"
+          label="Código de la empresa"
+          placeholder="Ej: YFFGNPB6"
+          autoCapitalize="characters"
+          required
+        />
+      )}
       <FormField
         id="fullName"
         name="fullName"

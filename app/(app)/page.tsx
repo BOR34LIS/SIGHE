@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/get-current-profile";
+import { JoinCompanyForm } from "./join-company-form";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super administrador",
@@ -25,11 +26,7 @@ export default async function HomePage() {
       <span className="rounded-full border border-border bg-surface-muted px-3 py-1 text-xs font-medium text-text-muted">
         Rol: {ROLE_LABELS[profile?.role ?? "usuario"]}
       </span>
-      {!profile?.company_id && (
-        <p className="max-w-xs text-sm text-text-subtle">
-          Aún no perteneces a ninguna empresa. Un administrador debe asignarte una.
-        </p>
-      )}
+      {!profile?.company_id && <JoinCompanyForm />}
       <div className="flex flex-wrap items-center justify-center gap-2">
         {(profile?.role === "admin" || profile?.role === "tecnico") && (
           <Link

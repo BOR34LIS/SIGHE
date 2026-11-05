@@ -28,9 +28,6 @@ export function Navbar({ profile }: { profile: CurrentProfile }) {
     <header className="border-b border-border bg-surface">
       <div className="flex items-center justify-between gap-2 px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-            SH
-          </div>
           <span className="font-semibold text-text">SIGHE</span>
         </div>
         <form action={logout}>

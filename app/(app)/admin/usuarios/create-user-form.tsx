@@ -7,11 +7,6 @@ import { SubmitButton } from "@/components/ui/submit-button";
 
 const initialState: CreateUserState = {};
 
-const ROLE_OPTIONS = [
-  { value: "usuario", label: "Usuario" },
-  { value: "tecnico", label: "Técnico" },
-] as const;
-
 export function CreateUserForm() {
   const [state, formAction] = useActionState(createCompanyUser, initialState);
   const [copied, setCopied] = useState(false);
@@ -66,23 +61,10 @@ export function CreateUserForm() {
         placeholder="nombre@empresa.com"
         required
       />
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="role" className="text-sm font-medium text-text">
-          Rol
-        </label>
-        <select
-          id="role"
-          name="role"
-          defaultValue="usuario"
-          className="h-11 rounded-lg border border-border bg-surface-muted px-3 text-base text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-        >
-          {ROLE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <p className="text-sm text-text-muted">
+        Se crea como <span className="font-medium text-text">técnico</span>. Las cuentas que solo
+        necesitan reportar equipos se crean ellas mismas en /signup con el código de la empresa.
+      </p>
       {state.error && (
         <p className="text-sm text-danger" role="alert">
           {state.error}
