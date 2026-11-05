@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/get-current-profile";
-import { AddSparePartForm } from "./add-spare-part-form";
-import { SparePartCard } from "./spare-part-card";
+import { AddSparePartButton } from "./add-spare-part-form";
+import { InventoryManager } from "./inventory-manager";
 import type { SparePart } from "./types";
 
 export const metadata: Metadata = {
@@ -34,21 +34,9 @@ export default async function InventarioPage() {
         </p>
       </div>
 
-      {isAdmin && (
-        <div className="w-full max-w-xl">
-          <AddSparePartForm />
-        </div>
-      )}
+      {isAdmin && <AddSparePartButton />}
 
-      {parts.length === 0 ? (
-        <p className="text-sm text-text-muted">Aún no hay repuestos registrados.</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {parts.map((part) => (
-            <SparePartCard key={part.id} part={part} isAdmin={isAdmin} />
-          ))}
-        </div>
-      )}
+      <InventoryManager parts={parts} isAdmin={isAdmin} />
     </div>
   );
 }

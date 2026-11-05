@@ -58,16 +58,30 @@ export async function createSparePart(
   return { success: `Repuesto "${name}" agregado.` };
 }
 
-// Botones + / − de la página de inventario. Usa la función adjust_spare_part_stock
-// para que la suma/resta se haga en la base de datos (el CHECK impide stock negativo).
-export async function adjustStock(sparePartId: string, amount: number) {
-  if (!(await isCompanyAdmin())) return;
+export type StockChange = { id: string; delta: number };
+
+
+export async function applyStockChanges(
+  changes: StockChange[]
+): Promise<{ error?: string }> {
+  if (!(await isCompanyAdmin())) {
+    return { error: "No tienes permisos para realizar esta acción." };
+  }
 
   const supabase = await createClient();
-  await supabase.rpc("adjust_spare_part_stock", {
-    p_id: sparePartId,
-    p_amount: amount,
-  });
+
+  // adjust_spare_part_stock suma/resta (no reemplaza), por eso se manda el
+  // delta y no el valor final; el CHECK de la tabla sigue impidiendo stock negativo.
+  const results = await Promise.all(
+    changes.map((change) =>
+      supabase.rpc("adjust_spare_part_stock", { p_id: change.id, p_amount: change.delta })
+    )
+  );
+
+  if (results.some((result) => result.error)) {
+    return { error: "No se pudieron guardar algunos cambios. Intenta nuevamente." };
+  }
 
   revalidatePath("/inventario");
+  return {};
 }
