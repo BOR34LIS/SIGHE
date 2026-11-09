@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { getCurrentProfile } from "@/lib/get-current-profile";
+import { getDashboardMetrics } from "@/lib/get-dashboard-metrics";
 import { JoinCompanyForm } from "./join-company-form";
+import { DashboardMetricsView } from "./dashboard-metrics";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super administrador",
@@ -11,6 +12,13 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default async function HomePage() {
   const profile = await getCurrentProfile();
+
+  // Solo admin/tecnico con empresa ven las metricas del dashboard.
+  const isStaff = profile?.role === "admin" || profile?.role === "tecnico";
+  const metrics =
+    isStaff && profile?.company_id
+      ? await getDashboardMetrics(profile.role as "admin" | "tecnico", profile.id)
+      : null;
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10 text-center">
@@ -27,24 +35,7 @@ export default async function HomePage() {
         Rol: {ROLE_LABELS[profile?.role ?? "usuario"]}
       </span>
       {!profile?.company_id && <JoinCompanyForm />}
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {(profile?.role === "admin" || profile?.role === "tecnico") && (
-          <Link
-            href="/mapa"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
-          >
-            Mapa de equipos
-          </Link>
-        )}
-        {profile?.role === "admin" && (
-          <Link
-            href="/admin/usuarios"
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-surface-muted"
-          >
-            Panel de administración
-          </Link>
-        )}
-      </div>
+      {metrics && <DashboardMetricsView metrics={metrics} />}
     </div>
   );
 }
