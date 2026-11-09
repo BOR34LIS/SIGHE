@@ -29,12 +29,7 @@ export function ReporteForm({ equipment }: { equipment: EquipmentWithFloor }) {
   return (
     <div className="flex flex-1 flex-col bg-background">
       <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-            SH
-          </div>
-          <span className="font-semibold text-text">SIGHE</span>
-        </div>
+        <span className="font-semibold text-text">SIGHE</span>
         <form action={logout}>
           <button
             type="submit"

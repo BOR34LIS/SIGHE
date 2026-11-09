@@ -1,5 +1,3 @@
-// Es el componente mas interactivo del mapa: arrastre de equipos, zoom y
-// resize del lienzo son todo eventos del navegador, asi que corre en el cliente.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -15,7 +13,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-// Limites del zoom: 25% a 200%, en pasos de 10 puntos porcentuales por clic.
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.1;
@@ -34,28 +31,15 @@ export function FloorCanvas({
 }) {
   // Lista de equipos del piso actual (se carga en el useEffect de abajo).
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  // Mientras se hace la carga inicial, se muestra "Cargando equipos...".
   const [isLoading, setIsLoading] = useState(true);
-  // Id del equipo que esta mostrando su panel de detalle (null = ninguno).
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Modo edicion: habilita arrastrar, agregar, eliminar y resize del piso.
   const [isEditMode, setIsEditMode] = useState(false);
-  // Tamaño actual del lienzo en pixeles "logicos" (sin aplicar el zoom).
-  // Arranca con el valor guardado en la DB, pero se actualiza en vivo
-  // mientras el usuario arrastra la esquina de resize (antes de guardar).
   const [canvasSize, setCanvasSize] = useState({
     width: floor.canvas_width,
     height: floor.canvas_height,
   });
-  // Nivel de zoom actual (1 = 100%). Es solo una preferencia de vista, no se
-  // guarda en la DB ni afecta la posicion real de los equipos.
   const [zoom, setZoom] = useState(1);
-  // Id del equipo que se esta arrastrando actualmente (null = ninguno). Se
-  // guarda en un ref en vez de en el estado para que handlePointerMove no
-  // tenga que re-renderizar el componente en cada pixel arrastrado.
   const draggingId = useRef<string | null>(null);
-  // Y si se esta arrastrando la esquina de resize, desde que posicion y
-  // tamaño empezo el arrastre (para calcular el delta en cada movimiento).
   const resizeStart = useRef<{ x: number; y: number; width: number; height: number } | null>(
     null
   );
@@ -63,42 +47,24 @@ export function FloorCanvas({
   // pantalla (getBoundingClientRect) y convertir coordenadas del puntero a
   // porcentaje de posicion dentro de el.
   const containerRef = useRef<HTMLDivElement>(null);
-  // Copia de "equipment" en un ref: la suscripcion de Realtime de mas abajo
-  // se arma una sola vez por piso (no se quiere volver a suscribir en cada
-  // arrastre), pero su callback igual necesita saber la lista de equipos
-  // MAS RECIENTE para filtrar los cambios que le interesan. No se puede
-  // escribir el ref directo durante el render (React lo prohíbe), por eso
-  // se actualiza en un efecto aparte, uno que corre despues de cada render.
   const equipmentRef = useRef<Equipment[]>([]);
   useEffect(() => {
     equipmentRef.current = equipment;
   }, [equipment]);
 
-  // Carga los equipos del piso cada vez que cambia floor.id. En la practica
-  // FloorCanvas se remonta entero al cambiar de piso (MapView le pone un
-  // key={floor.id}), asi que este efecto corre una sola vez por piso visitado
-  // eso es justo el "cargar todo apenas se pida" que no queriamos hacer
-  // para los 10 pisos de una empresa de una sola vez.
+  // Carga inicial de los equipos del piso y si tienen tickets abiertos.
+  // Se hace en paralelo para no esperar a que termine la primera consulta antes de empezar la segunda.
+  // Se guarda el resultado en el estado "equipment" y se marca isLoading=false cuando termina.
   useEffect(() => {
-    // Evita pisar el estado si el
-    // componente se desmonta (o el efecto se vuelve a correr) antes de que
-    // terminen las consultas a Supabase.
     let cancelled = false;
 
     const supabase = createClient();
-    // Primera consulta: todos los equipos del piso, con sus posiciones y
-    // si estan deshabilitados. Se guarda en "equipment" para que se dibujen
-    // en el lienzo.
     (async () => {
       const { data: equipmentData } = await supabase
         .from("equipment")
         .select("id, floor_id, type, label, icon, x_position, y_position, is_disabled")
         .eq("floor_id", floor.id);
 
-      // Segunda consulta: cuales de estos equipos tienen un reporte sin
-      // resolver (pendiente o en_revision). has_open_report no es una
-      // columna de "equipment" — se calcula aqui, cruzando las dos tablas,
-      // y es lo que despues pinta el circulo de amarillo en EquipmentNode.
       const ids = (equipmentData ?? []).map((item) => item.id);
       let openReportIds = new Set<string>();
 
@@ -127,7 +93,7 @@ export function FloorCanvas({
     };
   }, [floor.id]);
 
-  // Suscripcion a Realtime: cada vez que cambia un ticket de reparacion, se
+  // Suscripcion a Realtime, cada vez que cambia un ticket de reparacion, se
   // revisa si el equipo afectado esta en este piso y, si es asi, se vuelve a
   // consultar la DB para ver si tiene al menos un ticket abierto.
   useEffect(() => {
@@ -139,7 +105,7 @@ export function FloorCanvas({
       // El socket de Realtime necesita el JWT de la sesion para que RLS lo
       // deje ver los tickets de su empresa. Si nos suscribimos ANTES de que
       // esto termine, el servidor puede tratarnos como anonimos y no
-      // mandarnos nunca ningun evento — sin ningun error visible.
+      // mandarnos nunca ningun evento
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -158,7 +124,7 @@ export function FloorCanvas({
             if (!equipmentRef.current.some((item) => item.id === equipmentId)) return;
 
             // Se vuelve a preguntar en vez de confiar en el status de ESTE
-            // ticket: puede haber mas de un ticket por equipo, y lo que
+            // ticket, puede haber mas de un ticket por equipo, y lo que
             // importa es si queda al menos uno abierto.
             const { count } = await supabase
               .from("repair_tickets")
@@ -229,10 +195,6 @@ export function FloorCanvas({
       .eq("id", id);
   }
 
-  // Mismo trio pointerdown/move/up que el arrastre de equipos, pero aplicado
-  // a la esquina de resize en vez de a un EquipmentNode. e.stopPropagation()
-  // evita que estos eventos tambien activen el drag de equipos del div padre
-  // (ambos escuchan eventos de puntero en la misma zona).
   function handleResizePointerDown(e: React.PointerEvent) {
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -312,13 +274,8 @@ export function FloorCanvas({
             : "Toca un equipo para ver sus detalles."}
         </p>
         <div className="flex shrink-0 items-center gap-2">
-          {/* "+ Equipo" solo existe (ni se muestra) fuera de modo edicion. */}
           {isEditMode && <AddEquipmentButton floorId={floor.id} onAdded={handleEquipmentAdded} />}
           <div className="flex items-center gap-0.5 rounded-lg border border-border">
-            {/* Controles de zoom: siempre visibles (no dependen de
-                isEditMode), porque alejar/acercar es para VER mejor el piso,
-                no una edicion. El round(...*100)/100 evita que el zoom vaya
-                acumulando errores de punto flotante (ej. 0.30000000004). */}
             <button
               type="button"
               onClick={() => setZoom((z) => Math.round(clamp(z - ZOOM_STEP, ZOOM_MIN, ZOOM_MAX) * 100) / 100)}
@@ -341,7 +298,6 @@ export function FloorCanvas({
               +
             </button>
           </div>
-          {/* El unico toggle que controla todo el modo edicion del piso. */}
           <button
             type="button"
             onClick={() => setIsEditMode((prev) => !prev)}
@@ -356,12 +312,7 @@ export function FloorCanvas({
         </div>
       </div>
 
-      {/* Viewport con scroll nativo: si el lienzo (ya escalado por zoom) es
-          mas grande que este contenedor, el navegador agrega barras de
-          scroll solo, sin JS extra. */}
       <div className="h-[65vh] min-h-80 w-full overflow-auto rounded-2xl border border-dashed border-border bg-background">
-        {/* "Sizer": define el area real de scroll (ya escalada). El canvas interno
-            conserva sus dimensiones sin escalar para que el % de los equipos no cambie. */}
         <div style={{ width: canvasSize.width * zoom, height: canvasSize.height * zoom }}>
           <div
             ref={containerRef}
@@ -404,8 +355,6 @@ export function FloorCanvas({
               />
             ))}
 
-            {/* Esquina de resize: solo existe en modo edicion. El SVG con 3
-                puntitos es el icono clasico de "arrastrar para redimensionar". */}
             {isEditMode && (
               <div
                 onPointerDown={handleResizePointerDown}
@@ -424,17 +373,12 @@ export function FloorCanvas({
           </div>
         </div>
       </div>
-
-      {/* Tamaño actual del piso en px, solo visible en modo edicion (es un
-          dato util mientras se esta ajustando, no para el uso normal). */}
       {isEditMode && (
         <p className="text-xs text-text-subtle">
           Tamaño del piso: {Math.round(canvasSize.width)} × {Math.round(canvasSize.height)} px
         </p>
       )}
 
-      {/* Panel de detalle, debajo del lienzo: solo aparece si hay un equipo
-          seleccionado (ver selectedEquipment mas arriba). */}
       {selectedEquipment && (
         <EquipmentDetailPanel
           equipment={selectedEquipment}
